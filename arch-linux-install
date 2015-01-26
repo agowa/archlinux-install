@@ -81,7 +81,7 @@ mkinitcpio -p linux
 
 # Setup grub
 grub-install
-In /etc/default/grub edit the line GRUB_CMDLINE_LINUX to GRUB_CMDLINE_LINUX="cryptdevice=/dev/sdX3:luks" then run:
+In /etc/default/grub edit the line GRUB_CMDLINE_LINUX to GRUB_CMDLINE_LINUX="cryptdevice=/dev/sdX3:luks:allow-discards" then run:
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # Exit new system and go into the cd shell
