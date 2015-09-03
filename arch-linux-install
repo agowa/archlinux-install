@@ -3,21 +3,21 @@
 
 # Download the archiso image from https://www.archlinux.org/
 # Copy to a usb-drive
-dd if=archlinux.img of=/dev/sdX bs=16M # on linux
+dd if=archlinux.img of=/dev/sdX bs=16M && sync # on linux
 
-# Boot from the usb. If the usb fails to boot, make sure that secure boot is disabeled in the BIOS configuration.
+# Boot from the usb. If the usb fails to boot, make sure that secure boot is disabled in the BIOS configuration.
 
 # Set swedish keymap
 loadkeys sv-latin1
 
-# This assumes a wifi system...
-wifi-menu wlo1 # wlo1 is the device name, use ip link to find your actual name
+# This assumes a wifi only system...
+wifi-menu
 
 # Create partitions
 cgdisk /dev/sdX
-1 100MB EFI partition
-2 250MB Boot partition
-3 100% size partiton # (to be encrypted)
+1 100MB EFI partition # Hex code ef00
+2 250MB Boot partition # Hex code 8300
+3 100% size partiton # (to be encrypted) Hex code 8300
 
 mkfs.vfat -F32 /dev/sdX1
 mkfs.ext2 /dev/sdX2
@@ -47,12 +47,13 @@ mount /dev/sdX1 /mnt/boot/efi
 
 # Install the system also includes stuff needed for starting wifi when first booting into the newly installed system
 # Unless vim and zsh are desired these can be removed from the command
-pacstrap /mnt base base-devel grub-efi-x86_64 zsh vim efibootmgr dialog wpa_supplicant
+pacstrap /mnt base base-devel grub-efi-x86_64 zsh vim git efibootmgr dialog wpa_supplicant
 
 # 'install' fstab
 genfstab -pU /mnt >> /mnt/etc/fstab
 # Make /tmp a ramdisk (add the following line to /mnt/etc/fstab)
 tmpfs	/tmp	tmpfs	defaults,noatime,mode=1777	0	0
+# Change relatime on all non-boot partitions to noatime (reduces wear if using an SSD)
 
 # Enter the new system
 arch-chroot /mnt /bin/bash
@@ -63,6 +64,11 @@ hwclock --systohc --utc
 
 # Set the hostname
 echo MYHOSTNAME > /etc/hostname
+
+# Update locale
+echo LANG=en_US.UTF-8 > /etc/locale.conf
+echo LANGUAGE=en_US > /etc/locale.conf
+echo LC_ALL=C > /etc/locale.conf
 
 # Set password for root
 passwd
