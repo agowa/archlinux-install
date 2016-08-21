@@ -74,7 +74,7 @@ echo LC_ALL=C >> /etc/locale.conf
 passwd
 
 # Add real user remove -s flag if you don't whish to use zsh
-# useradd -m -g users -G wheel,storage,power -s /bin/zsh MYUSERNAME
+# useradd -m -g users -G wheel -s /bin/zsh MYUSERNAME
 # passwd MYUSERNAME
 
 # Configure mkinitcpio with modules needed for the initrd image
