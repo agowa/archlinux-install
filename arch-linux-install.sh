@@ -127,6 +127,11 @@ mkdir /etc/skel/.config/autostart-scripts
 echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
 echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
 
+# Add Multilib
+echo '[multilib]' >> /etc/pacman.conf
+echo 'Include = /etc/pacman.d/mirrorlist' >> /etc/pacman.conf
+pacman -Syu
+
 # Enable acpi for notebooks
 sudo systemctl enable acpid
 
