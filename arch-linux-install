@@ -7,8 +7,8 @@ dd if=archlinux.img of=/dev/sdX bs=16M && sync # on linux
 
 # Boot from the usb. If the usb fails to boot, make sure that secure boot is disabled in the BIOS configuration.
 
-# Set swedish keymap
-loadkeys sv-latin1
+# Set german keymap
+loadkeys de-latin1
 
 # This assumes a wifi only system...
 wifi-menu
@@ -47,7 +47,7 @@ mount /dev/sda1 /mnt/boot/efi
 
 # Install the system also includes stuff needed for starting wifi when first booting into the newly installed system
 # Unless vim and zsh are desired these can be removed from the command
-pacstrap /mnt base base-devel grub-efi-x86_64 zsh vim nano bash htop git efibootmgr dialog wpa_supplicant
+pacstrap /mnt base base-devel grub-efi-x86_64 zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant
 
 # 'install' fstab
 genfstab -pU /mnt >> /mnt/etc/fstab
@@ -59,11 +59,16 @@ tmpfs	/tmp	tmpfs	defaults,noatime,mode=1777	0	0
 arch-chroot /mnt /bin/bash
 
 # Setup system clock
-ln -s /usr/share/zoneinfo/Europe/Stockholm /etc/localtime
+rm /etc/localtime
+ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 hwclock --systohc --utc
 
 # Set the hostname
 echo MYHOSTNAME > /etc/hostname
+
+# Set DNS-Server
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+echo "nameserver 8.8.4.4" > /etc/resolv.conf
 
 # Update locale
 echo LANG=en_US.UTF-8 >> /etc/locale.conf
@@ -74,11 +79,11 @@ echo LC_ALL=C >> /etc/locale.conf
 passwd
 
 # Add real user remove -s flag if you don't whish to use zsh
-# useradd -m -g users -G wheel -s /bin/zsh MYUSERNAME
-# passwd MYUSERNAME
+useradd -m -g users -G wheel -s /bin/zsh user
+passwd user
 
 # Configure mkinitcpio with modules needed for the initrd image
-vim /etc/mkinitcpio.conf
+vi /etc/mkinitcpio.conf
 # Add 'ext4' to MODULES
 # Add 'encrypt' and 'lvm2' to HOOKS before filesystems
 
@@ -87,7 +92,7 @@ mkinitcpio -p linux
 
 # Setup grub
 grub-install
-In /etc/default/grub edit the line GRUB_CMDLINE_LINUX to GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda3:luks:allow-discards" then run:
+vi /etc/default/grub # edit the line GRUB_CMDLINE_LINUX to GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda3:luks:allow-discards" then run:
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # Exit new system and go into the cd shell
@@ -99,3 +104,19 @@ swapoff -a
 
 # Reboot into the new system, don't forget to remove the cd/usb
 reboot
+
+# Set keyboard layout
+loadkeys de-latin1
+localectl set-x11-keymap de pc105 de_nodeadkeys
+
+# Install packages
+pacman -S xorg-server xorg-xinit xorg-drivers xf86-input-synaptics xorg-fonts-75dpi xorg-fonts-100dpi
+pacman -S plasma-meta kde-l10n-de kde-applications-meta sddm sddm-kcm plasma-wayland-session kde-applications-meta ttf-dejavu ttf-liberation
+pacman -S acpid kdegraphics-thumbnailers ffmpegthumbs print-manager cups colord argyllcms chromium firefox kdeconnect sshfs
+
+# Enable acpi for notebooks
+sudo systemctl enable acpid
+
+# Install missing firmware and than
+# Regenerate initrd image
+mkinitcpio -p linux
