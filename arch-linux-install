@@ -68,7 +68,7 @@ echo MYHOSTNAME > /etc/hostname
 
 # Set DNS-Server
 echo "nameserver 8.8.8.8" > /etc/resolv.conf
-echo "nameserver 8.8.4.4" > /etc/resolv.conf
+echo "nameserver 8.8.4.4" >> /etc/resolv.conf
 
 # Update locale
 echo LANG=en_US.UTF-8 >> /etc/locale.conf
@@ -77,10 +77,6 @@ echo LC_ALL=C >> /etc/locale.conf
 
 # Set password for root
 passwd
-
-# Add real user remove -s flag if you don't whish to use zsh
-useradd -m -g users -G wheel -s /bin/zsh user
-passwd user
 
 # Configure mkinitcpio with modules needed for the initrd image
 vi /etc/mkinitcpio.conf
@@ -119,8 +115,17 @@ pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd dnsmasq
 systemctl enable NetworkManager.service
 
 # Enable KDE Wallet unlock on logon
-echo "auth            optional        pam_kwallet5.so" > /etc/pam.d/sddm
-echo "session         optional        pam_kwallet5.so auto_start" > /etc/pam.d/sddm
+echo "auth            optional        pam_kwallet5.so" >> /etc/pam.d/sddm
+echo "session         optional        pam_kwallet5.so auto_start" >> /etc/pam.d/sddm
+
+# Add SSH Key to KDE Wallet
+echo 'export SSH_ASKPASS="/usr/bin/ksshaskpass"' >> /etc/profile
+echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
+echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
+mkdir /etc/skel/.config
+mkdir /etc/skel/.config/autostart-scripts
+echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
+echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
 
 # Enable acpi for notebooks
 sudo systemctl enable acpid
@@ -128,3 +133,7 @@ sudo systemctl enable acpid
 # Install missing firmware and than
 # Regenerate initrd image
 mkinitcpio -p linux
+
+# Add real user remove -s flag if you don't whish to use zsh
+useradd -m -g users -G wheel -s /bin/zsh user
+passwd user
