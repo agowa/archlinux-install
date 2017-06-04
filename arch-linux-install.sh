@@ -15,9 +15,9 @@ wifi-menu
 
 # Create partitions
 cgdisk /dev/sda
-1 100MB EFI partition # Hex code ef00
-2 250MB Boot partition # Hex code 8300
-3 100% size partiton # (to be encrypted) Hex code 8300
+# 1 100MB EFI partition # Hex code ef00
+# 2 250MB Boot partition # Hex code 8300
+# 3 100% size partiton # (to be encrypted) Hex code 8300
 
 mkfs.vfat -F32 /dev/sda1
 mkfs.ext2 /dev/sda2
