@@ -104,6 +104,9 @@ reboot
 # Set keyboard layout
 loadkeys de-latin1
 localectl set-x11-keymap de pc105 de_nodeadkeys
+echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
+echo 'de_DE.UTF-8 UTF-8' >> /etc/locale.gen
+locale-gen
 
 # Install packages
 pacman -S xorg-server xorg-xinit xorg-drivers xf86-input-synaptics xorg-fonts-75dpi xorg-fonts-100dpi
