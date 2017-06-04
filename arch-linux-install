@@ -113,10 +113,14 @@ localectl set-x11-keymap de pc105 de_nodeadkeys
 pacman -S xorg-server xorg-xinit xorg-drivers xf86-input-synaptics xorg-fonts-75dpi xorg-fonts-100dpi
 pacman -S plasma-meta kde-l10n-de kde-applications-meta sddm sddm-kcm plasma-wayland-session kde-applications-meta ttf-dejavu ttf-liberation
 pacman -S acpid kdegraphics-thumbnailers ffmpegthumbs print-manager cups colord argyllcms chromium firefox kdeconnect sshfs
-pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd
+pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd dnsmasq
 
 # Enable kde networkmanager
 systemctl enable NetworkManager.service
+
+# Enable KDE Wallet unlock on logon
+echo "auth            optional        pam_kwallet5.so" > /etc/pam.d/sddm
+echo "session         optional        pam_kwallet5.so auto_start" > /etc/pam.d/sddm
 
 # Enable acpi for notebooks
 sudo systemctl enable acpid
