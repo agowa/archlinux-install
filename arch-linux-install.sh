@@ -134,6 +134,9 @@ sudo systemctl enable acpid
 # Regenerate initrd image
 mkinitcpio -p linux
 
+# Allow sudo for group wheel
+echo '%wheel ALL=(ALL) ALL' >> /etc/sudoers
+
 # Add real user remove -s flag if you don't whish to use zsh
 useradd -m -g users -G wheel -s /bin/zsh user
 passwd user
