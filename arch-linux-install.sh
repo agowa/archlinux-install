@@ -8,7 +8,7 @@ dd if=archlinux.img of=/dev/sdX bs=16M && sync # on linux
 # Boot from the usb. If the usb fails to boot, make sure that secure boot is disabled in the BIOS configuration.
 
 # Set german keymap
-loadkeys de-latin1
+#loadkeys de-latin1
 
 # This assumes a wifi only system...
 wifi-menu
@@ -102,10 +102,16 @@ swapoff -a
 reboot
 
 # Set keyboard layout
-loadkeys de-latin1
-localectl set-x11-keymap de pc105 de_nodeadkeys
+#loadkeys de-latin1
+
+# compose: defines the compose key
+# terminate: defines the key/combination for killing the xserver
+# localectl set-x11-keymap de pc105 de_nodeadkeys terminate:ctrl_alt_bksp,compose:rctrl
+localectl set-x11-keymap us pc105+inet "" terminate:ctrl_alt_bksp,compose:rctrl
+localectl set-keymap us
+localectl status
 echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
-echo 'de_DE.UTF-8 UTF-8' >> /etc/locale.gen
+# echo 'de_DE.UTF-8 UTF-8' >> /etc/locale.gen
 locale-gen
 
 # Install packages
