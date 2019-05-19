@@ -1,0 +1,32 @@
+[general]
+accounts = MSExchange
+ui = quiet
+fsync = false
+
+[mbnames]
+enabled = yes
+filename = ~/Mutt/muttrc.mailboxes
+header = "mailboxes "
+peritem = "+%(accountname)s/%(foldername)s"
+sep = " "
+footer = "\n"
+incremental = no
+
+[Account MSExchange]
+localrepository = LocalMSExchange
+remoterepository = RemoteMSExchange
+
+[Repository LocalMSExchange]
+type = Maildir
+localfolders = ~/Mail
+sep = "/"
+
+[Repository RemoteMSExchange]
+type = IMAP
+remotehost = YOUR_SERVER_NAME_GOES_HERE
+remoteport = 993
+remoteuser = YOUR_USERNAME_GOES_HERE
+remotepass = YOUR_PASSWORD_GOES_HERE
+ssl_version = tls1_2
+tls_level = tls_secure
+sslcacertfile = OS-DEFAULT

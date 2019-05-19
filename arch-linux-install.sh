@@ -15,16 +15,23 @@ wifi-menu
 
 # Create partitions
 cgdisk /dev/sda
+# For grub:
 # 1 100MB EFI partition # Hex code ef00
 # 2 250MB Boot partition # Hex code 8300
 # 3 100% size partiton # (to be encrypted) Hex code 8300
+# For systemd-boot (default for rest of this):
+# 1 350MB Boot partition # Hex code ef00
+# 2 100% size partiton # (to be encrypted) Hex code 8300
 
 mkfs.vfat -F32 /dev/sda1
 mkfs.ext2 /dev/sda2
 
 # Setup the encryption of the system
-cryptsetup -c aes-xts-plain64 -y --use-random luksFormat /dev/sda3
-cryptsetup luksOpen /dev/sda3 luks
+# For Grub:
+# cryptsetup -c aes-xts-plain64 -y --use-random luksFormat /dev/sda3
+# cryptsetup luksOpen /dev/sda3 luks
+cryptsetup -c aes-xts-plain64 -y --use-random luksFormat /dev/sda2
+cryptsetup luksOpen /dev/sda2 luks
 
 # Create encrypted partitions
 # This creates one partions for root, modify if /home or other partitions should be on separate partitions
@@ -41,13 +48,16 @@ mkswap /dev/mapper/vg0-swap
 mount /dev/mapper/vg0-root /mnt # /mnt is the installed system
 swapon /dev/mapper/vg0-swap # Not needed but a good thing to test
 mkdir /mnt/boot
-mount /dev/sda2 /mnt/boot
-mkdir /mnt/boot/efi
-mount /dev/sda1 /mnt/boot/efi
+# For Grub:
+# mount /dev/sda2 /mnt/boot
+# mkdir /mnt/boot/efi
+# mount /dev/sda1 /mnt/boot/efi
+# For systemd-boot:
+mount /dev/sda1 /mnt/boot
 
 # Install the system also includes stuff needed for starting wifi when first booting into the newly installed system
 # Unless vim and zsh are desired these can be removed from the command
-pacstrap /mnt base base-devel grub-efi-x86_64 zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant
+pacstrap /mnt base base-devel intel-ucode zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant # grub-efi-x86_64
 
 # 'install' fstab
 genfstab -pU /mnt >> /mnt/etc/fstab
@@ -67,8 +77,9 @@ hwclock --systohc --utc
 echo MYHOSTNAME > /etc/hostname
 
 # Set DNS-Server
-echo "nameserver 8.8.8.8" > /etc/resolv.conf
-echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+# Copy resolved.conf to /etc/systemd/resolved.conf
+systemctl enable systemd-resolved.service
+ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
 # Update locale
 echo LANG=en_US.UTF-8 >> /etc/locale.conf
@@ -82,14 +93,34 @@ passwd
 vi /etc/mkinitcpio.conf
 # Add 'ext4' to MODULES
 # Add 'encrypt' and 'lvm2' to HOOKS before filesystems
+# Also make sure 'keyboard' is listed somewhere to the left of 'encrypt'
 
 # Regenerate initrd image
 mkinitcpio -p linux
 
 # Setup grub
-grub-install
-vi /etc/default/grub # edit the line GRUB_CMDLINE_LINUX to GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda3:luks:allow-discards" then run:
-grub-mkconfig -o /boot/grub/grub.cfg
+#grub-install
+#vi /etc/default/grub # edit the line GRUB_CMDLINE_LINUX to GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda3:luks:allow-discards" then run:
+#grub-mkconfig -o /boot/grub/grub.cfg
+
+# TODO: Add details for systemd-boot here
+bootctl --path=/boot install
+# Install systemd-boot-pacman-hook from https://aur.archlinux.org/packages/systemd-boot-pacman-hook/
+# to auto update systemd-boot with pacman
+git clone https://aur.archlinux.org/systemd-boot-pacman-hook.git
+chown -R nobody:nobody ./systemd-boot-pacman-hook
+cd ./systemd-boot-pacman-hook
+su nobody -s /usr/sbin/makepkg
+pacman -U systemd-boot-pacman-hook.*pkg.*
+cd ..
+rm -rf ./systemd-boot-pacman-hook
+# Create bootloader entry
+mkdir -p /boot/loader/entries
+echo -e 'timeout 0\ndefault arch\neditor no\nauto-entries no\nauto-firmware no\nconsole-mode max' > /boot/loader/loader.conf
+echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /initramfs-linux.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap quiet' > /boot/loader/entries/arch.conf
+
+# TODO: Add steps for secureboot signing
+# TODO: Add steps for selinux support
 
 # Exit new system and go into the cd shell
 exit
@@ -119,6 +150,7 @@ pacman -S xorg-server xorg-xinit xorg-drivers xf86-input-synaptics xorg-fonts-75
 pacman -S plasma-meta kde-l10n-de kde-applications-meta sddm sddm-kcm plasma-wayland-session kde-applications-meta ttf-dejavu ttf-liberation
 pacman -S acpid kdegraphics-thumbnailers ffmpegthumbs print-manager cups colord argyllcms chromium firefox kdeconnect sshfs
 pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd dnsmasq
+pacman -S xsel neomutt offlineimap
 
 # Enable kde networkmanager
 systemctl enable NetworkManager.service
@@ -127,14 +159,26 @@ systemctl enable NetworkManager.service
 echo "auth            optional        pam_kwallet5.so" >> /etc/pam.d/sddm
 echo "session         optional        pam_kwallet5.so auto_start" >> /etc/pam.d/sddm
 
-# Add SSH Key to KDE Wallet
-echo 'export SSH_ASKPASS="/usr/bin/ksshaskpass"' >> /etc/profile
-echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
-echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
-mkdir /etc/skel/.config
-mkdir /etc/skel/.config/autostart-scripts
-echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
-echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
+## Add SSH Key to KDE Wallet
+#echo 'export SSH_ASKPASS="/usr/bin/ksshaskpass"' >> /etc/profile
+#echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
+#echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
+#mkdir /etc/skel/.config
+#mkdir /etc/skel/.config/autostart-scripts
+#echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
+#echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
+
+# Setup aliases
+echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"' > /etc/profile.d/gpg-agent.ssh.sh # Allow openssh to use gpg to store secrets
+echo 'alias ls="ls --color=auto"' > /etc/profile.d/ls-color.sh # colorate ls output
+echo 'alias xclip="xsel --clipboard"' > /etc/profile.d/xclip.sh # register xclip as alias for xsel to access clipboard from bash
+echo -e 'export http_proxy=""\nexport https_proxy=""\nexport ftp_proxy=""\nexport socks_proxy=""' > /etc/profile.d/proxy.sh # Provide empty proxy variable for buggy applications.
+echo -e 'WINEPREFIX="$HOME/.wine32"\nWINEARCH=win32' > /etc/profile.d/wine.sh # 
+# TODO: Save prompt.sh as /etc/profile.d/prompt.sh
+
+# TODO: Add yubikey seps:
+#     - to allow client auth in firefox and chrome)
+#     - use stored ssh private keys
 
 # Add Multilib
 echo '[multilib]' >> /etc/pacman.conf
@@ -151,6 +195,10 @@ mkinitcpio -p linux
 # Allow sudo for group wheel
 echo '%wheel ALL=(ALL) ALL' >> /etc/sudoers
 
-# Add real user remove -s flag if you don't whish to use zsh
+# Add real user
 useradd -m -g users -G wheel -s /bin/zsh user
 passwd user
+
+# TODO: Copy .offlineimaprc to /home/user/.offlineimaprc
+chmod 0400 /home/user/.offlineimaprc
+chown user:user /home/user/.offlineimaprc
