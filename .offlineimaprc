@@ -5,7 +5,7 @@ fsync = false
 
 [mbnames]
 enabled = yes
-filename = ~/Mutt/muttrc.mailboxes
+filename = ~/.neomutt/mailboxes
 header = "mailboxes "
 peritem = "+%(accountname)s/%(foldername)s"
 sep = " "
@@ -18,8 +18,8 @@ remoterepository = RemoteMSExchange
 
 [Repository LocalMSExchange]
 type = Maildir
-localfolders = ~/Mail
-sep = "/"
+localfolders = ~/mail/MSExchange
+sep = /
 
 [Repository RemoteMSExchange]
 type = IMAP
@@ -30,3 +30,5 @@ remotepass = YOUR_PASSWORD_GOES_HERE
 ssl_version = tls1_2
 tls_level = tls_secure
 sslcacertfile = OS-DEFAULT
+maxconnections = 1
+singlethreadperfolder = yes
