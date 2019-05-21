@@ -28,7 +28,8 @@ mkfs.vfat -F32 /dev/sda1
 # For grub also: mkfs.ext2 /dev/sda2
 
 # Setup the encryption of the system
-cryptsetup -c aes-xts-plain64 -y --use-random luksFormat /dev/sda2 # sda3 for setup with grub
+# cryptsetup benchmark
+cryptsetup --cipher aes-xts-plain64 --hash sha512 --iter-time 5000 --key-size 512 -y --use-random luksFormat /dev/sda2 # sda3 for setup with grub
 cryptsetup luksOpen /dev/sda2 luks # sda3 for setup with grub
 
 # Create encrypted partitions
@@ -56,7 +57,7 @@ mount /dev/sda1 /mnt/boot
 
 # Install the system also includes stuff needed for starting wifi when first booting into the newly installed system
 # Unless vim and zsh are desired these can be removed from the command
-pacstrap /mnt base base-devel intel-ucode zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant # grub-efi-x86_64
+pacstrap /mnt base base-devel linux-firmware intel-ucode zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant # grub-efi-x86_64
 
 # 'install' fstab
 genfstab -pU /mnt >> /mnt/etc/fstab
