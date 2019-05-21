@@ -1,0 +1,31 @@
+set mail_check_stats
+set folder="~/mail"
+set alias_file="~/.neomutt/mail_aliases"    # Tell the alias command where to save new aliases
+set record="~/.neomutt/sent"                # Where to place outbound mails
+set postponed="~/.neomutt/postponed"        # Postponed messages file
+set assumed_charset=iso-8859-2:utf8
+
+set sidebar_format = "%B%?F? [%F]?%* %?N?%N/?%S"
+set sidebar_visible                         # Make the sidebar visible by default
+set sidebar_short_path                      # Shorten mailbox names
+set sidebar_folder_indent                   # Indent all shortened folder names
+# Enable after offlineimap delimiter bug is fixed
+#set sidebar_delim_chars="/"                # Delete everything up to the last / character
+
+color sidebar_indicator default color17         # Dark blue background
+color sidebar_highlight white   color238        # Grey background
+color sidebar_spoolfile yellow  default         # Yellow
+color sidebar_new       green   default         # Green
+color sidebar_ordinary  default default         # Default colors
+color sidebar_flagged   red     default         # Red
+color sidebar_divider   color8  default         # Dark grey
+
+bind index,pager <C-Left> sidebar-toggle-visible     # Use 'B' to switch the Sidebar on and off
+bind index,pager <C-Up> sidebar-prev                 # Move the highlight to the previous mailbox
+bind index,pager <C-Down> sidebar-next               # Move the highlight to the next mailbox
+bind index,pager <C-Right> sidebar-open              # Open the highlighted mailbox
+bind compose     f       "edit-from"                 # edit the from: field
+bind compose     \ef     "edit-fcc"                  # enter a file to save a copy of this message in
+
+# Include other configuration files
+source ~/.neomutt/mailboxes

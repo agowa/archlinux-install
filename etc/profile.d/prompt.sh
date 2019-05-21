@@ -1,3 +1,4 @@
+#!/bin/bash
 # Configure prompt to show more information
 
 # Git Repository status

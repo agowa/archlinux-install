@@ -3,7 +3,7 @@
 
 # Download the archiso image from https://www.archlinux.org/
 # Copy to a usb-drive
-dd if=archlinux.img of=/dev/sdX bs=16M && sync # on linux
+dd if=archlinux.img | dd of=/dev/sdX bs=16M; sync # on linux
 
 # Boot from the usb. If the usb fails to boot, make sure that secure boot is disabled in the BIOS configuration.
 
@@ -15,23 +15,21 @@ wifi-menu
 
 # Create partitions
 cgdisk /dev/sda
-# For grub:
+# For grub (legacy):
 # 1 100MB EFI partition # Hex code ef00
 # 2 250MB Boot partition # Hex code 8300
 # 3 100% size partiton # (to be encrypted) Hex code 8300
+#
 # For systemd-boot (default for rest of this):
 # 1 350MB Boot partition # Hex code ef00
 # 2 100% size partiton # (to be encrypted) Hex code 8300
 
 mkfs.vfat -F32 /dev/sda1
-mkfs.ext2 /dev/sda2
+# For grub also: mkfs.ext2 /dev/sda2
 
 # Setup the encryption of the system
-# For Grub:
-# cryptsetup -c aes-xts-plain64 -y --use-random luksFormat /dev/sda3
-# cryptsetup luksOpen /dev/sda3 luks
-cryptsetup -c aes-xts-plain64 -y --use-random luksFormat /dev/sda2
-cryptsetup luksOpen /dev/sda2 luks
+cryptsetup -c aes-xts-plain64 -y --use-random luksFormat /dev/sda2 # sda3 for setup with grub
+cryptsetup luksOpen /dev/sda2 luks # sda3 for setup with grub
 
 # Create encrypted partitions
 # This creates one partions for root, modify if /home or other partitions should be on separate partitions
@@ -48,10 +46,11 @@ mkswap /dev/mapper/vg0-swap
 mount /dev/mapper/vg0-root /mnt # /mnt is the installed system
 swapon /dev/mapper/vg0-swap # Not needed but a good thing to test
 mkdir /mnt/boot
-# For Grub:
+# For setup with grub:
 # mount /dev/sda2 /mnt/boot
 # mkdir /mnt/boot/efi
 # mount /dev/sda1 /mnt/boot/efi
+#
 # For systemd-boot:
 mount /dev/sda1 /mnt/boot
 
@@ -77,7 +76,7 @@ hwclock --systohc --utc
 echo MYHOSTNAME > /etc/hostname
 
 # Set DNS-Server
-# Copy resolved.conf to /etc/systemd/resolved.conf
+# Copy /etc/systemd/resolved.conf (from this repository) to /etc/systemd/resolved.conf
 systemctl enable systemd-resolved.service
 ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
@@ -174,7 +173,7 @@ echo 'alias ls="ls --color=auto"' > /etc/profile.d/ls-color.sh # colorate ls out
 echo 'alias xclip="xsel --clipboard"' > /etc/profile.d/xclip.sh # register xclip as alias for xsel to access clipboard from bash
 echo -e 'export http_proxy=""\nexport https_proxy=""\nexport ftp_proxy=""\nexport socks_proxy=""' > /etc/profile.d/proxy.sh # Provide empty proxy variable for buggy applications.
 echo -e 'WINEPREFIX="$HOME/.wine32"\nWINEARCH=win32' > /etc/profile.d/wine.sh # 
-# TODO: Save prompt.sh as /etc/profile.d/prompt.sh
+# TODO: Save /etc/profile.d/prompt.sh (from this repository) as /etc/profile.d/prompt.sh
 
 # TODO: Add yubikey seps:
 #     - to allow client auth in firefox and chrome)
@@ -196,9 +195,21 @@ mkinitcpio -p linux
 echo '%wheel ALL=(ALL) ALL' >> /etc/sudoers
 
 # Add real user
-useradd -m -g users -G wheel -s /bin/zsh user
+useradd -m -g users -G wheel -s /bin/bash user
 passwd user
 
-# TODO: Copy .offlineimaprc to /home/user/.offlineimaprc
+# TODO: Copy ~/.offlineimaprc (from this repository) to /home/user/.offlineimaprc
 chmod 0400 /home/user/.offlineimaprc
 chown user:user /home/user/.offlineimaprc
+# TODO: Add credentials to /home/user/.offlineimaprc file
+
+# TODO: Copy ~/.neomutt/neomuttrc (from this repository) to /home/user/.neomutt/neomuttrc
+chmod 0500 /home/user/.neomutt
+chmod 0400 /home/user/.neomutt/neomuttrc
+chown user:user /home/user/.offlineimaprc
+
+# TODO: Add stepps for sending emails using smarthost from within neomutt.
+
+# TODO: Logoff and logon as user again.
+systemctl --user cat offlineimap-oneshot@MSExchange.timer
+systemctl --user cat offlineimap-oneshot@MSExchange.service
