@@ -151,6 +151,7 @@ pacman -S plasma-meta kde-l10n-de kde-applications-meta sddm sddm-kcm plasma-way
 pacman -S acpid kdegraphics-thumbnailers ffmpegthumbs print-manager cups colord argyllcms chromium firefox kdeconnect sshfs
 pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd dnsmasq
 pacman -S xsel neomutt offlineimap
+pacman -S opensc # For YubiKey
 
 # Enable kde networkmanager
 systemctl enable NetworkManager.service
@@ -159,17 +160,11 @@ systemctl enable NetworkManager.service
 echo "auth            optional        pam_kwallet5.so" >> /etc/pam.d/sddm
 echo "session         optional        pam_kwallet5.so auto_start" >> /etc/pam.d/sddm
 
-## Add SSH Key to KDE Wallet
-#echo 'export SSH_ASKPASS="/usr/bin/ksshaskpass"' >> /etc/profile
-#echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
-#echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
-#mkdir /etc/skel/.config
-#mkdir /etc/skel/.config/autostart-scripts
-#echo '#!/bin/sh' > ~/.config/autostart-scripts/ssh-add.sh
-#echo 'ssh-add </dev/null' >> ~/.config/autostart-scripts/ssh-add.sh
+## Add SSH Keys to GPG Agent
+#echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"' > /etc/profile.d/gpg-agent.ssh.sh # Allow openssh to use gpg to store secrets, but does not work with YubiKey PIV (fails to work with opensc)
 
 # Setup aliases
-echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"' > /etc/profile.d/gpg-agent.ssh.sh # Allow openssh to use gpg to store secrets
+echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"' > /etc/profile.d/ssh-agent.sh
 echo 'alias ls="ls --color=auto"' > /etc/profile.d/ls-color.sh # colorate ls output
 echo 'alias xclip="xsel --clipboard"' > /etc/profile.d/xclip.sh # register xclip as alias for xsel to access clipboard from bash
 echo -e 'export http_proxy=""\nexport https_proxy=""\nexport ftp_proxy=""\nexport socks_proxy=""' > /etc/profile.d/proxy.sh # Provide empty proxy variable for buggy applications.
@@ -186,7 +181,7 @@ echo 'Include = /etc/pacman.d/mirrorlist' >> /etc/pacman.conf
 pacman -Syu
 
 # Enable acpi for notebooks
-sudo systemctl enable acpid
+sudo systemctl enable --now acpid
 
 # Install missing firmware and than
 # Regenerate initrd image
@@ -209,8 +204,11 @@ chmod 0500 /home/user/.neomutt
 chmod 0400 /home/user/.neomutt/neomuttrc
 chown user:user /home/user/.offlineimaprc
 
-# TODO: Add stepps for sending emails using smarthost from within neomutt.
+# TODO: Add steps for sending emails using smarthost from within neomutt.
 
 # TODO: Logoff and logon as user again.
-systemctl --user cat offlineimap-oneshot@MSExchange.timer
-systemctl --user cat offlineimap-oneshot@MSExchange.service
+systemctl --user enable offlineimap-oneshot@MSExchange.timer
+systemctl --user enable --now offlineimap-oneshot@MSExchange.service
+# TODO: Copy /etc/systemd/ssh-agent.service to /etc/systemd/user/ssh-agent.service
+systemctl --user enable --now ssh-agent.service
+# Use `ssh-add -s /usr/lib/opensc-pkcs11.so` to unlock yubikey for use with openssh
