@@ -1,0 +1,1 @@
+alias xclip="xsel --clipboard"
