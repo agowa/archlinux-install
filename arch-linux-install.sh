@@ -212,3 +212,27 @@ systemctl --user enable --now offlineimap-oneshot@MSExchange.service
 # TODO: Copy /etc/systemd/ssh-agent.service to /etc/systemd/user/ssh-agent.service
 systemctl --user enable --now ssh-agent.service
 # Use `ssh-add -s /usr/lib/opensc-pkcs11.so` to unlock yubikey for use with openssh
+
+# Yubikey Luks unlock:
+# AUR package yubikey-full-disk-encryption-git
+git submodule add -b master https://aur.archlinux.org/yubikey-full-disk-encryption-git.git
+cd yubikey-full-disk-encryption-git
+makepkg
+sudo pacman -U yubikey-full-disk-encryption-git-*-any.pkg.tar
+
+# TODO: Copy etc/ykfde.conf to /etc/ykfde.conf
+# Insert luks partition uuid into YKFDE_DISK_UUID=""
+# Luks partition uuid can be queried using:
+sudo cryptsetup luksDump /dev/sda3 | grep UUID
+# Add Yubikey to Luks volume Key Slot 7
+sudo ykfde-enroll -d /dev/sda3 -s 7
+sudo nano /etc/mkinitcpio.conf
+# TODO: Replace the encrypt with ykfde (HOOKS)
+# and add "xhci_pci thinkpad_acpi ehci_pci aesni_intel"
+# to MODULES
+# Than regenerate the ramdisk,
+# Systemd hooks currently don't work, but they are slower
+# anyway. Even though systemd-boot is used.
+sudo mkinitcpio -p linux
+# Delete passphrase from volume (clear key slot 0):
+sudo ykfde-enroll -d /dev/sda3 -s 0 -k
