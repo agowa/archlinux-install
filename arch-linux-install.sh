@@ -156,6 +156,10 @@ pacman -S opensc # For YubiKey
 # Enable kde networkmanager
 systemctl enable NetworkManager.service
 
+# Enable randomn number generators (also install opensc to use YubiKey as entropy source)
+pacman -S rng-tools haveged
+systemctl enable rngd.service haveged.service
+
 # Enable KDE Wallet unlock on logon
 echo "auth            optional        pam_kwallet5.so" >> /etc/pam.d/sddm
 echo "session         optional        pam_kwallet5.so auto_start" >> /etc/pam.d/sddm
