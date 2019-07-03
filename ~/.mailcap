@@ -1,0 +1,1 @@
+text/html; w3m -dump -T %t -I %{charset} -o display_link_number=1; copiousoutput; nametemplate=%s.html; description=HTML Text; test=type w3m >/dev/null

@@ -4,6 +4,8 @@ set alias_file="~/.neomutt/mail_aliases"    # Tell the alias command where to sa
 set record="~/.neomutt/sent"                # Where to place outbound mails
 set postponed="~/.neomutt/postponed"        # Postponed messages file
 set assumed_charset=iso-8859-2:utf8
+auto_view text/html                         # Allow to automatically view html emails
+alternative_order text/plain text/html text # Prefere plaintext over html
 
 set sidebar_format = "%B%?F? [%F]?%* %?N?%N/?%S"
 set sidebar_visible                         # Make the sidebar visible by default

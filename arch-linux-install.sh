@@ -204,8 +204,10 @@ chown user:user /home/user/.offlineimaprc
 # TODO: Add credentials to /home/user/.offlineimaprc file
 
 # TODO: Copy ~/.neomutt/neomuttrc (from this repository) to /home/user/.neomutt/neomuttrc
+# TODO: Copy ~/.mailcap to /home/user/.mailcap
 chmod 0500 /home/user/.neomutt
 chmod 0400 /home/user/.neomutt/neomuttrc
+chmod 0400 /home/user/.mailcap
 chown user:user /home/user/.offlineimaprc
 
 # TODO: Add steps for sending emails using smarthost from within neomutt.
