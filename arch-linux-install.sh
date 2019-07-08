@@ -150,7 +150,7 @@ pacman -S xorg-server xorg-xinit xorg-drivers xf86-input-synaptics xorg-fonts-75
 pacman -S plasma-meta kde-l10n-de kde-applications-meta sddm sddm-kcm plasma-wayland-session kde-applications-meta ttf-dejavu ttf-liberation
 pacman -S acpid kdegraphics-thumbnailers ffmpegthumbs print-manager cups colord argyllcms chromium firefox kdeconnect sshfs
 pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd dnsmasq
-pacman -S xsel neomutt offlineimap
+pacman -S xsel neomutt offlineimap nullmailer
 pacman -S opensc # For YubiKey
 
 # Enable kde networkmanager
@@ -218,6 +218,18 @@ systemctl --user enable --now offlineimap-oneshot@MSExchange.service
 # TODO: Copy /etc/systemd/ssh-agent.service to /etc/systemd/user/ssh-agent.service
 systemctl --user enable --now ssh-agent.service
 # Use `ssh-add -s /usr/lib/opensc-pkcs11.so` to unlock yubikey for use with openssh
+
+# Configure sendmail
+# TODO: Replace with valid credentials and fqdns
+mv /usr/sbin/sendmail /usr/sbin/sendmail-bin
+touch /usr/sbin/sendmail
+chmod 755 /usr/sbin/sendmail
+echo '#!/bin/bash' > /usr/sbin/sendmail
+echo '/usr/sbin/sendmail-bin -f `cat /etc/nullmailer/forced-from` $@ </dev/stdin' >> /usr/sbin/sendmail
+echo 'user@example.tld' | tee /etc/nullmailer/forced-from > /etc/nullmailer/adminaddr
+echo 'example.tld' | tee /etc/nullmailer/defaultdomain > /etc/nullmailer/me
+echo 'mail.example.tld smtp --port=587 --starttls --auth-login --user=user@example.tld --pass=PASSWORD'
+systemctl restart nullmailer.service
 
 # Yubikey Luks unlock:
 # AUR package yubikey-full-disk-encryption-git
