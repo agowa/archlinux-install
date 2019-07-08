@@ -228,8 +228,9 @@ echo '#!/bin/bash' > /usr/sbin/sendmail
 echo '/usr/sbin/sendmail-bin -f `cat /etc/nullmailer/forced-from` $@ </dev/stdin' >> /usr/sbin/sendmail
 echo 'user@example.tld' | tee /etc/nullmailer/forced-from > /etc/nullmailer/adminaddr
 echo 'example.tld' | tee /etc/nullmailer/defaultdomain > /etc/nullmailer/me
-echo 'mail.example.tld smtp --port=587 --starttls --auth-login --user=user@example.tld --pass=PASSWORD'
+echo 'mail.example.tld smtp --port=587 --starttls --auth-login --user=user@example.tld --pass=PASSWORD' > /etc/nullmailer/remotes
 systemctl restart nullmailer.service
+echo 'set from="user@example.tld" # Default from address' >> /home/user/.neomutt/neomuttrc
 
 # Yubikey Luks unlock:
 # AUR package yubikey-full-disk-encryption-git
