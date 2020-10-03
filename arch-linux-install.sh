@@ -174,15 +174,16 @@ systemctl enable rngd.service haveged.service
 
 # TODO: Add kerberos to pam
 
-## Add SSH Keys to GPG Agent
-#echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"' > /etc/profile.d/gpg-agent.ssh.sh # Allow openssh to use gpg to store secrets, but does not work with YubiKey PIV (fails to work with opensc)
+# Setup environment variables
+echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"' > /etc/profile.d/gpg-agent.ssh.sh # Allow openssh to use gpg to store secrets, but does not work with YubiKey PIV (fails to work with opensc)
+#echo -e 'export http_proxy=""\nexport https_proxy=""\nexport ftp_proxy=""\nexport socks_proxy=""' > /etc/profile.d/proxy.sh # Provide empty proxy variable for buggy applications.
+#echo -e 'export WINEPREFIX="$HOME/.wine32"\nexport WINEARCH=win32' > /etc/profile.d/wine.sh
 
 # Setup aliases
-echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"' > /etc/profile.d/ssh-agent.sh
-echo 'alias ls="ls --color=auto"' > /etc/profile.d/ls-color.sh # colorate ls output
-echo 'alias xclip="xsel --clipboard"' > /etc/profile.d/xclip.sh # register xclip as alias for xsel to access clipboard from bash
-#echo -e 'export http_proxy=""\nexport https_proxy=""\nexport ftp_proxy=""\nexport socks_proxy=""' > /etc/profile.d/proxy.sh # Provide empty proxy variable for buggy applications.
-#echo -e 'WINEPREFIX="$HOME/.wine32"\nWINEARCH=win32' > /etc/profile.d/wine.sh # 
+echo -e '\nif test -d /etc/bash.bashrc.d/; then\n    for profile in /etc/bash.bashrc.d/*.sh; do\n        test -r "$profile" && . "$profile"\n    done\n    unset profile\nfi' >> /etc/bash.bashrc
+mkdir /etc/bash.bashrc.d
+echo 'alias ls="ls --color=auto"' >> /etc/bash.bashrc.d/ls-color.sh # colorate ls output
+echo 'alias xclip="xsel --clipboard"' >> /etc/bash.bashrc.d/xclip.sh # register xclip as alias for xsel to access clipboard from bash
 
 # TODO: Save /etc/profile.d/prompt.sh (from this repository) as /etc/profile.d/prompt.sh
 
@@ -229,8 +230,11 @@ chown user:user /home/user/.offlineimaprc
 # TODO: Logoff and logon as user again.
 systemctl --user enable offlineimap-oneshot@MSExchange.timer
 systemctl --user enable --now offlineimap-oneshot@MSExchange.service
+
 # TODO: Copy /etc/systemd/ssh-agent.service to /etc/systemd/user/ssh-agent.service
-systemctl --user enable --now ssh-agent.service
+# remove /etc/profile.d/gpg-agent.ssh.sh again, if ssh-agent.sock should be used
+#echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"' > /etc/profile.d/ssh-agent.sh
+#systemctl --user enable --now ssh-agent.service
 # Use `ssh-add -s /usr/lib/opensc-pkcs11.so` to unlock yubikey for use with openssh
 
 # Configure sendmail
