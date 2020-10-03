@@ -57,7 +57,7 @@ mount /dev/sda1 /mnt/boot
 
 # Install the system also includes stuff needed for starting wifi when first booting into the newly installed system
 # Unless vim and zsh are desired these can be removed from the command
-pacstrap /mnt base base-devel linux-firmware intel-ucode zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant # grub-efi-x86_64
+pacstrap /mnt base base-devel linux-firmware intel-ucode zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant mkinitcpio linux lvm2 # grub-efi-x86_64
 
 # 'install' fstab
 genfstab -pU /mnt >> /mnt/etc/fstab
@@ -103,7 +103,7 @@ mkinitcpio -p linux
 #vi /etc/default/grub # edit the line GRUB_CMDLINE_LINUX to GRUB_CMDLINE_LINUX="cryptdevice=/dev/sda3:luks:allow-discards" then run:
 #grub-mkconfig -o /boot/grub/grub.cfg
 
-# TODO: Add details for systemd-boot here
+# Add details for systemd-boot here
 bootctl --path=/boot install
 # Install systemd-boot-pacman-hook from https://aur.archlinux.org/packages/systemd-boot-pacman-hook/
 # to auto update systemd-boot with pacman
@@ -117,7 +117,8 @@ rm -rf ./systemd-boot-pacman-hook
 # Create bootloader entry
 mkdir -p /boot/loader/entries
 echo -e 'timeout 0\ndefault arch\neditor no\nauto-entries no\nauto-firmware no\nconsole-mode max' > /boot/loader/loader.conf
-echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /initramfs-linux.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap quiet' > /boot/loader/entries/arch.conf
+echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap quiet' > /boot/loader/entries/arch.conf
+echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux-fallback.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap quiet' > /boot/loader/entries/arch-fallback.conf
 
 # TODO: Add steps for secureboot signing
 # TODO: Add steps for selinux support
@@ -146,23 +147,32 @@ echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
 locale-gen
 
 # Install packages
+pacman -S acpid
 pacman -S xorg-server xorg-xinit xorg-drivers xf86-input-synaptics xorg-fonts-75dpi xorg-fonts-100dpi
-pacman -S plasma-meta kde-l10n-de kde-applications-meta sddm sddm-kcm plasma-wayland-session kde-applications-meta ttf-dejavu ttf-liberation
-pacman -S acpid kdegraphics-thumbnailers ffmpegthumbs print-manager cups colord argyllcms chromium firefox kdeconnect sshfs
-pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd dnsmasq
-pacman -S xsel neomutt offlineimap nullmailer
+pacman -S plasma-meta sddm sddm-kcm plasma-wayland-session ttf-dejavu ttf-liberation phonon-qt5-gstreamer phonon-qt5-vlc
+pacman -S cups sshfs bash-completion zsh-completions
+pacman -S neomutt offlineimap nullmailer
 pacman -S opensc # For YubiKey
+systemctl enable sddm acpid
 
-# Enable kde networkmanager
-systemctl enable NetworkManager.service
+# Install gui applications
+#pacman -S kde-applications-meta
+#pacman -S networkmanager-dispatcher-sshd networkmanager-dispatcher-ntpd dnsmasq
+pacman -S kdegraphics-thumbnailers ffmpegthumbs libheif print-manager cups colord argyllcms kdeconnect xsel
+pacman -S code chromium firefox dolphin konsole kbibtex okular gwenview kolourpaint krita skanlite kdegraphics-mobipocket
+pacman -S krdc freerdp libvncserver libssh keditbookmarks kmix kile
+pacman -S kontact kmail kaddressbook korganizer akregator kdepim-addons kleopatra ktimetracker ksysguard ksystemlog
+pacman -S kwalletmanager dolphin-plugins ark p7zip unrar unarchiver lzop lrzip kwrite kcalc spectacle smb4k kamera
+pacman -S ktorrent geoip kplotting geoip-database-extra
+
+## Enable kde networkmanager
+#systemctl enable NetworkManager.service
 
 # Enable randomn number generators (also install opensc to use YubiKey as entropy source)
 pacman -S rng-tools haveged
 systemctl enable rngd.service haveged.service
 
-# Enable KDE Wallet unlock on logon
-echo "auth            optional        pam_kwallet5.so" >> /etc/pam.d/sddm
-echo "session         optional        pam_kwallet5.so auto_start" >> /etc/pam.d/sddm
+# TODO: Add kerberos to pam
 
 ## Add SSH Keys to GPG Agent
 #echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/gnupg/S.gpg-agent.ssh"' > /etc/profile.d/gpg-agent.ssh.sh # Allow openssh to use gpg to store secrets, but does not work with YubiKey PIV (fails to work with opensc)
@@ -171,8 +181,9 @@ echo "session         optional        pam_kwallet5.so auto_start" >> /etc/pam.d/
 echo 'export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"' > /etc/profile.d/ssh-agent.sh
 echo 'alias ls="ls --color=auto"' > /etc/profile.d/ls-color.sh # colorate ls output
 echo 'alias xclip="xsel --clipboard"' > /etc/profile.d/xclip.sh # register xclip as alias for xsel to access clipboard from bash
-echo -e 'export http_proxy=""\nexport https_proxy=""\nexport ftp_proxy=""\nexport socks_proxy=""' > /etc/profile.d/proxy.sh # Provide empty proxy variable for buggy applications.
-echo -e 'WINEPREFIX="$HOME/.wine32"\nWINEARCH=win32' > /etc/profile.d/wine.sh # 
+#echo -e 'export http_proxy=""\nexport https_proxy=""\nexport ftp_proxy=""\nexport socks_proxy=""' > /etc/profile.d/proxy.sh # Provide empty proxy variable for buggy applications.
+#echo -e 'WINEPREFIX="$HOME/.wine32"\nWINEARCH=win32' > /etc/profile.d/wine.sh # 
+
 # TODO: Save /etc/profile.d/prompt.sh (from this repository) as /etc/profile.d/prompt.sh
 
 # TODO: Add yubikey seps:
@@ -185,10 +196,13 @@ echo 'Include = /etc/pacman.d/mirrorlist' >> /etc/pacman.conf
 pacman -Syu
 
 # Enable acpi for notebooks
-sudo systemctl enable --now acpid
+systemctl enable --now acpid
 
 # Install missing firmware and than
+# add "xhci_pci thinkpad_acpi ehci_pci aesni_intel"
+# to MODULES
 # Regenerate initrd image
+# xhci_pci for some controllers is available using: https://aur.archlinux.org/packages/upd72020x-fw/
 mkinitcpio -p linux
 
 # Allow sudo for group wheel
@@ -247,8 +261,6 @@ sudo cryptsetup luksDump /dev/sda3 | grep UUID
 sudo ykfde-enroll -d /dev/sda3 -s 7
 sudo nano /etc/mkinitcpio.conf
 # TODO: Replace the encrypt with ykfde (HOOKS)
-# and add "xhci_pci thinkpad_acpi ehci_pci aesni_intel"
-# to MODULES
 # Than regenerate the ramdisk,
 # Systemd hooks currently don't work, but they are slower
 # anyway. Even though systemd-boot is used.
