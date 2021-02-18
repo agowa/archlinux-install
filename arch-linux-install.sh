@@ -117,8 +117,8 @@ rm -rf ./systemd-boot-pacman-hook
 # Create bootloader entry
 mkdir -p /boot/loader/entries
 echo -e 'timeout 0\ndefault arch\neditor no\nauto-entries no\nauto-firmware no\nconsole-mode max' > /boot/loader/loader.conf
-echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap quiet' > /boot/loader/entries/arch.conf
-echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux-fallback.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap quiet' > /boot/loader/entries/arch-fallback.conf
+echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap systemd.unified_cgroup_hierarchy=1 cgroup_no_v1="all" quiet' > /boot/loader/entries/arch.conf
+echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux-fallback.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap systemd.unified_cgroup_hierarchy=1 cgroup_no_v1="all" quiet' > /boot/loader/entries/arch-fallback.conf
 
 # TODO: Add steps for secureboot signing
 # TODO: Add steps for selinux support
