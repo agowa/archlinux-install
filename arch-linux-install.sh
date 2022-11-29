@@ -7,28 +7,55 @@ dd if=archlinux.img | dd of=/dev/sdX bs=16M; sync # on linux
 
 # Boot from the usb. If the usb fails to boot, make sure that secure boot is disabled in the BIOS configuration.
 
+# To boot the pxe image within an iPXE environment you first need to press CTRL+B and look at the header.
+# If the header only contains HTTP but not HTTPS you'll need to download the official pxe image and upload it to
+# a http server (or to another server where you can host an ad-hoc temporary python3 web server)
+# For that just download the pxe file from https://archlinux.org/releng/netboot/ into an empty directory
+# rename it to `ipxe.pxe` and run `python3 -m http.server -d /path/to/the/directory/`
+# After that run these commands within the iPXE shell to boot it:
+#dhcp
+#chain http://your-server.example.com:8000/ipxe.pxe
+
 # Set german keymap
 #loadkeys de-latin1
 
 # This assumes a wifi only system...
 wifi-menu
 
-# Create partitions
+# Create partitions GPT
 cgdisk /dev/sda
-# For grub (legacy):
+# For grub (legacy way):
 # 1 100MB EFI partition # Hex code ef00
-# 2 250MB Boot partition # Hex code 8300
-# 3 100% size partiton # (to be encrypted) Hex code 8300
+# 2 250MB Boot partition # Hex code ef02
+# 3 100% size partiton # (to be encrypted) Hex code 8309
 #
 # For systemd-boot (default for rest of this):
 # 1 350MB Boot partition # Hex code ef00
-# 2 100% size partiton # (to be encrypted) Hex code 8300
+# 2 100% size partiton # (to be encrypted) Hex code 8309
+#
+# List of partition types: https://wiki.archlinux.org/title/GPT_fdisk#Partition_type
+# 8300: Linux partition (btrfs, ext4, ...)
+# ef00: EFI boot partition (FAT32)
+# ef02: BIOS boot parition
+# 8309: LUKS/Cryptsetup encrypted partition
+# 8e00: LVM partition
+# 8200: swap
+# 8304: root partition
+
+# Create partitions on MBR (should not be needed in most cases)
+# later steps in this tutorial do not fully cover installing on MBR and may not fully apply.
+# Use fdisk to create a partition layout and use one of these two partition setups:
+# a)
+# 1 350M Boot partition
+# 2 100% size partition # (to be encrypted) Hex code 8309
 
 mkfs.vfat -F32 /dev/sda1
 # For grub also: mkfs.ext2 /dev/sda2
+# For MBR instead: mkfs.ext4 /dev/sda1
 
 # Setup the encryption of the system
 # cryptsetup benchmark
+# If you want a key file use `dd if=/dev/urandom of=/boot/keyfile bs=1024 count=4` to generate it.
 cryptsetup --cipher aes-xts-plain64 --hash sha512 --iter-time 5000 --key-size 512 -y --use-random luksFormat /dev/sda2 # sda3 for setup with grub
 cryptsetup luksOpen /dev/sda2 luks # sda3 for setup with grub
 
@@ -58,6 +85,16 @@ mount /dev/sda1 /mnt/boot
 # Install the system also includes stuff needed for starting wifi when first booting into the newly installed system
 # Unless vim and zsh are desired these can be removed from the command
 pacstrap /mnt base base-devel linux-firmware intel-ucode zsh vim nano bash htop net-tools git efibootmgr dialog wpa_supplicant mkinitcpio linux lvm2 # grub-efi-x86_64
+# Note: If you get an error with pacman you may need to reset it (only occured within the customized archlinux boot environment of a cloud provider)
+#rm -rf /etc/pacman.d/gnupg/* /var/lib/pacman/
+#umount /etc/pacman.d/gnupg
+#echo 'Server = https://ftp.halifax.rwth-aachen.de/archlinux/$repo/os/$arch' > /etc/pacman.d/mirrorlist
+#pacman-key --init
+#pacman-key --populate
+#pacman -S archlinux-keyring
+#umount -R /mnt/boot
+#rm -rf /mnt/
+# And now remount /mnt/boot (and if available /mnt/boot/efi) and rerun pacstrap.
 
 # 'install' fstab
 genfstab -pU /mnt >> /mnt/etc/fstab
@@ -70,7 +107,10 @@ arch-chroot /mnt /bin/bash
 
 # Setup system clock
 rm /etc/localtime
-ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+ln -s /usr/share/zoneinfo/UTC /etc/localtime
+# If it's a server stick to using UTC for consistent unambiguous timestamps, otherwise
+# you may use your local one like:
+#ln -s /usr/share/zoneinfo/Europe/Berlin /etc/localtime
 hwclock --systohc --utc
 
 # Set the hostname
@@ -79,6 +119,10 @@ echo MYHOSTNAME > /etc/hostname
 # Set DNS-Server
 # Copy /etc/systemd/resolved.conf (from this repository) to /etc/systemd/resolved.conf
 systemctl enable systemd-resolved.service
+rm -f /etc/resolv.conf
+# If this throws an "rm: cannot remove '/etc/resolv.conf': Device or resource busy" error run:
+#umount /etc/resolv.conf; rm -f /etc/resolv.conf
+# and try again.
 ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
 # Update locale
@@ -117,8 +161,9 @@ rm -rf ./systemd-boot-pacman-hook
 # Create bootloader entry
 mkdir -p /boot/loader/entries
 echo -e 'timeout 0\ndefault arch\neditor no\nauto-entries no\nauto-firmware no\nconsole-mode max' > /boot/loader/loader.conf
-echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap systemd.unified_cgroup_hierarchy=1 cgroup_no_v1="all" quiet' > /boot/loader/entries/arch.conf
-echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux-fallback.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda3:luks:allow-discards resume=/dev/mapper/vg0-swap systemd.unified_cgroup_hierarchy=1 cgroup_no_v1="all" quiet' > /boot/loader/entries/arch-fallback.conf
+# If you're on a legacy system use sda3 instead of sda2 for the following:
+echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda2:luks:allow-discards resume=/dev/mapper/vg0-swap systemd.unified_cgroup_hierarchy=1 cgroup_no_v1="all" quiet' > /boot/loader/entries/arch.conf
+echo -e 'title Arch Linux\nlinux /vmlinuz-linux\ninitrd /intel-ucode.img\ninitrd /amd-ucode.img\ninitrd /initramfs-linux-fallback.img\noptions root=/dev/mapper/vg0-root rw cryptdevice=/dev/sda2:luks:allow-discards resume=/dev/mapper/vg0-swap systemd.unified_cgroup_hierarchy=1 cgroup_no_v1="all" quiet' > /boot/loader/entries/arch-fallback.conf
 
 # TODO: Add steps for secureboot signing
 # TODO: Add steps for selinux support
